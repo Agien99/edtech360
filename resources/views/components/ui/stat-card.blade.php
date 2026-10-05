@@ -1,0 +1,1 @@
+@props(['icon'=>'bi-bar-chart','label','value','meta'=>null,'tone'=>'blue'])<div class="ed-stat-card h-100"><div class="ed-stat-icon tone-{{ $tone }}"><i class="bi {{ $icon }}"></i></div><div><span class="ed-stat-label">{{ $label }}</span><strong>{{ $value }}</strong>@if($meta)<small>{{ $meta }}</small>@endif</div></div>

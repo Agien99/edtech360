@@ -1,0 +1,13 @@
+*.log
+.env
+.phpunit.result.cache
+/.idea
+/.vscode
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/vendor
+Thumbs.db
+npm-debug.log
+yarn-error.log
