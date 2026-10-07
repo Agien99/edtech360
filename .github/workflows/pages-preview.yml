@@ -1,0 +1,114 @@
+name: Deploy Phase 1 Preview
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, openssl, pdo_mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Prepare Laravel environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan optimize:clear
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Start Laravel preview server
+        run: |
+          php artisan serve --host=127.0.0.1 --port=8000 > /tmp/edtech360-server.log 2>&1 &
+          echo $! > /tmp/edtech360-server.pid
+
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/up > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat /tmp/edtech360-server.log
+          exit 1
+
+      - name: Export Phase 1 routes as static preview
+        run: |
+          SITE_URL="https://agien99.github.io/edtech360"
+
+          mkdir -p _site
+          mkdir -p _site/login
+          mkdir -p _site/dashboard
+          mkdir -p _site/students/register
+          mkdir -p _site/students/complete-profile
+          mkdir -p _site/classes
+          mkdir -p _site/subjects
+
+          curl --fail --silent --show-error http://127.0.0.1:8000/login > _site/index.html
+          curl --fail --silent --show-error http://127.0.0.1:8000/login > _site/login/index.html
+          curl --fail --silent --show-error http://127.0.0.1:8000/dashboard > _site/dashboard/index.html
+          curl --fail --silent --show-error http://127.0.0.1:8000/students > _site/students/index.html
+          curl --fail --silent --show-error http://127.0.0.1:8000/students/register > _site/students/register/index.html
+          curl --fail --silent --show-error http://127.0.0.1:8000/students/complete-profile > _site/students/complete-profile/index.html
+          curl --fail --silent --show-error http://127.0.0.1:8000/classes > _site/classes/index.html
+          curl --fail --silent --show-error http://127.0.0.1:8000/subjects > _site/subjects/index.html
+
+          cp -R public/build _site/build
+          cp -R public/assets _site/assets
+          cp public/robots.txt _site/robots.txt
+          touch _site/.nojekyll
+
+          find _site -name '*.html' -type f -print0 | xargs -0 sed -i "s#http://127.0.0.1:8000#${SITE_URL}#g"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
