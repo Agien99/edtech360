@@ -4,6 +4,13 @@
     $navigationGroups = [
         'Academic' => [
             [
+                'label' => 'Academic Sessions',
+                'icon' => 'bi-calendar3',
+                'route' => 'academic-sessions.index',
+                'active' => 'academic-sessions.*',
+                'permission' => 'academic_sessions.view',
+            ],
+            [
                 'label' => 'Students',
                 'icon' => 'bi-people',
                 'route' => 'students.index',
