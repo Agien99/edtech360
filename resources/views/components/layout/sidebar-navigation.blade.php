@@ -11,6 +11,13 @@
                 'permission' => 'academic_sessions.view',
             ],
             [
+                'label' => 'Batches',
+                'icon' => 'bi-collection',
+                'route' => 'batches.index',
+                'active' => 'batches.*',
+                'permission' => 'batches.view',
+            ],
+            [
                 'label' => 'Students',
                 'icon' => 'bi-people',
                 'route' => 'students.index',

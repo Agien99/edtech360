@@ -11,6 +11,7 @@ use App\Http\Controllers\UiDemoController;
 use App\Http\Controllers\AcademicSessionController;
 use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\AcademicSessionLifecycleController;
+use App\Http\Controllers\BatchController;
 
 Route::redirect('/', '/dashboard');
 
@@ -82,5 +83,21 @@ Route::middleware(['auth', 'account.active'])->group(function () {
                 [AcademicSessionLifecycleController::class, 'close']
             )->name('close');
         });
+
+    Route::get('/batches', [BatchController::class, 'index'])
+        ->middleware('can:batches.view')
+        ->name('batches.index');
+
+    Route::post('/batches', [BatchController::class, 'store'])
+        ->middleware('can:batches.manage')
+        ->name('batches.store');
+    
+    Route::patch('/batches/{batch}', [BatchController::class, 'update'])
+        ->middleware('can:batches.manage')
+        ->name('batches.update');
+
+    Route::patch('/batches/{batch}/status', [BatchController::class, 'changeStatus'])
+    ->middleware('can:batches.manage')
+    ->name('batches.change-status');
 
 });
