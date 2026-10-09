@@ -1,1 +1,24 @@
-@extends('layouts.app') @section('title','Students') @section('content')<x-ui.page-header title="Students" description="Manage student records and academic information."><a class="btn btn-primary ed-btn-primary" href="{{ route('students.create') }}"><i class="bi bi-plus-lg"></i> Add Student</a></x-ui.page-header><section class="ed-card"><div class="ed-filterbar"><div class="ed-filter-search"><i class="bi bi-search"></i><input class="form-control" placeholder="Search student name, IC or class..."></div><select class="form-select"><option>All Classes</option></select><select class="form-select"><option>All Status</option></select><button class="btn btn-light border"><i class="bi bi-funnel"></i> Filters</button></div><div class="table-responsive d-none d-md-block"><table class="table ed-table align-middle mb-0"><thead><tr><th>#</th><th>Name</th><th>Class</th><th>IC / Student No.</th><th>Gender</th><th>Status</th><th></th></tr></thead><tbody>@foreach([['Ahmad Firdaus','6A','060101-14-1234','Male','Active'],['Siti Nur Aisyah','6B','060218-14-5678','Female','Active'],['Tan Wei Jie','6A','060305-14-0912','Male','Active'],['Nurul Izzah','6C','060415-14-3456','Female','Inactive']] as [$n,$c,$i,$g,$s])<tr><td>{{$loop->iteration}}</td><td><strong>{{$n}}</strong></td><td>{{$c}}</td><td>{{$i}}</td><td>{{$g}}</td><td><span class="badge rounded-pill {{$s==='Active'?'text-bg-success':'text-bg-danger'}}">{{$s}}</span></td><td class="text-end"><button class="btn btn-sm ed-icon-btn"><i class="bi bi-three-dots-vertical"></i></button></td></tr>@endforeach</tbody></table></div><div class="d-md-none ed-mobile-records">@foreach([['Ahmad Firdaus','Form 6A','Active'],['Siti Nur Aisyah','Form 6B','Active'],['Nurul Izzah','Form 6C','Inactive']] as [$n,$c,$s])<article class="ed-record-card"><div class="d-flex justify-content-between"><div><strong>{{$n}}</strong><small>{{$c}}</small></div><span class="badge rounded-pill {{$s==='Active'?'text-bg-success':'text-bg-danger'}}">{{$s}}</span></div><div class="ed-record-actions"><button class="btn btn-sm btn-light border">View</button><button class="btn btn-sm btn-light border">Edit</button></div></article>@endforeach</div><div class="ed-table-footer"><span>Showing 1 to 4 of 328 students</span><nav><ul class="pagination pagination-sm mb-0"><li class="page-item active"><span class="page-link">1</span></li><li class="page-item"><a class="page-link" href="#">2</a></li><li class="page-item"><a class="page-link" href="#">3</a></li></ul></nav></div></section>@endsection
+@extends('layouts.app')
+@section('title', 'Students')
+@section('content')
+<x-ui.page-header title="Students" description="Student records available under your assigned responsibilities." />
+<section class="ed-card">
+    <div class="table-responsive">
+        <table class="table ed-table align-middle mb-0">
+            <thead><tr><th>Student Number</th><th>Name</th><th>Status</th></tr></thead>
+            <tbody>
+                @forelse ($students as $student)
+                    <tr>
+                        <td>{{ $student->student_number }}</td>
+                        <td>{{ $student->full_name }}</td>
+                        <td>{{ ucfirst($student->status) }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="3" class="text-center py-4 text-muted">No accessible student records.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div class="p-3">{{ $students->links() }}</div>
+</section>
+@endsection
