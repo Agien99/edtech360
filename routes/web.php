@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UiDemoController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StudentManagementController;
+use App\Http\Controllers\StudentSelfServiceController;
 
 Route::redirect('/', '/dashboard');
 
@@ -53,4 +54,14 @@ Route::middleware('auth')->group(function () {
         '/students/{student}/transfer',
         [StudentManagementController::class, 'transfer']
     )->name('students.transfer');
+
+    Route::get(
+        '/my/student-profile',
+        [StudentSelfServiceController::class, 'show']
+    )->name('student.self.show');
+
+    Route::patch(
+        '/my/student-profile',
+        [StudentSelfServiceController::class, 'update']
+    )->name('student.self.update');
 });

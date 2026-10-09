@@ -75,4 +75,19 @@ class StudentProfilePolicy
             && $user->can('students.transfer')
             && $user->hasAnyRole(['super_admin', 'school_admin']);
     }
+
+    public function viewOwn(User $user, StudentProfile $student): bool
+    {
+        return $student->exists
+            && $student->status === 'active'
+            && (bool) $user->is_active
+            && $user->hasRole('student')
+            && (int) $student->user_id === (int) $user->id;
+    }
+
+    public function updateOwn(User $user, StudentProfile $student): bool
+    {
+        return $this->viewOwn($user, $student);
+    }
+
 }

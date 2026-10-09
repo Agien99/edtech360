@@ -47,11 +47,12 @@ class StudentEnrollmentAccessTest extends TestCase
         parent::setUp();
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
-        
+
         foreach ([
             'students.view',
             'students.update',
             'students.transfer',
+            'students.view_history',
             'classes.view',
         ] as $name) {
             Permission::findOrCreate($name, 'web');
@@ -62,12 +63,14 @@ class StudentEnrollmentAccessTest extends TestCase
                 'students.view',
                 'students.update',
                 'students.transfer',
+                'students.view_history',
                 'classes.view',
             ],
             'school_admin' => [
                 'students.view',
                 'students.update',
                 'students.transfer',
+                'students.view_history',
                 'classes.view',
             ],
             'class_teacher' => [
@@ -79,6 +82,11 @@ class StudentEnrollmentAccessTest extends TestCase
                 'students.view',
                 'classes.view',
             ],
+            'assistant_class_teacher' => [
+                'students.view',
+                'classes.view',
+            ],
+            'student' => [],
         ];
 
         foreach ($rolePermissions as $roleName => $permissions) {
@@ -663,67 +671,31 @@ class StudentEnrollmentAccessTest extends TestCase
         );
     }
 
+
     public function test_transfer_creates_central_audit_record(): void
     {
-        $admin = $this->createUser(
-            'school_admin',
-            'audit-transfer-admin'
-        );
-
+        $admin = $this->createUser('school_admin', 'audit-transfer-admin');
         $student = $this->createStudent('AUDIT001');
         $this->enroll($student, '6B1');
-
-        app(StudentTransferService::class)->transfer(
-            $admin,
-            $student,
-            $this->classes['6B2']
-        );
-
-        $this->assertDatabaseHas('audit_logs', [
-            'actor_user_id' => $admin->id,
-            'module' => 'students',
-            'action' => 'transfer',
-            'auditable_id' => $student->id,
-            'outcome' => 'success',
-        ]);
-
-        $audit = DB::table('audit_logs')
-            ->where('actor_user_id', $admin->id)
-            ->where('action', 'transfer')
-            ->first();
-
-        $old = json_decode($audit->old_values, true);
-        $new = json_decode($audit->new_values, true);
-
-        $this->assertSame(
-            $this->classes['6B1'],
-            $old['class_id']
-        );
-
-        $this->assertSame(
-            $this->classes['6B2'],
-            $new['class_id']
-        );
+        app(StudentTransferService::class)->transfer($admin, $student, $this->classes['6B2']);
+        $audit = DB::table('audit_logs')->where('actor_user_id', $admin->id)
+            ->where('action', 'transfer')->first();
+        $this->assertNotNull($audit);
+        $this->assertSame('students', $audit->module);
+        $this->assertSame($student->id, (int) $audit->auditable_id);
+        $this->assertSame($this->classes['6B1'], json_decode($audit->old_values, true)['class_id']);
+        $this->assertSame($this->classes['6B2'], json_decode($audit->new_values, true)['class_id']);
     }
 
     public function test_unauthorized_transfer_endpoint_is_denied(): void
     {
-        [$teacher, $teacherId] = $this->createTeacher(
-            'class_teacher',
-            'endpoint-denied-teacher'
-        );
-
+        [$teacher, $teacherId] = $this->createTeacher('class_teacher', 'endpoint-denied-teacher');
         $this->assignClassTeacher($teacherId, '6B1');
-
         $student = $this->createStudent('AUDIT002');
         $this->enroll($student, '6B1');
-
-        $this->actingAs($teacher)
-            ->post(route('students.transfer', $student), [
-                'class_id' => $this->classes['6B2'],
-            ])
-            ->assertForbidden();
-
+        $this->actingAs($teacher)->post(route('students.transfer', $student), [
+            'class_id' => $this->classes['6B2'],
+        ])->assertForbidden();
         $this->assertDatabaseHas('student_class_enrollments', [
             'student_profile_id' => $student->id,
             'class_id' => $this->classes['6B1'],
@@ -733,72 +705,140 @@ class StudentEnrollmentAccessTest extends TestCase
 
     public function test_profile_update_rejects_unauthorized_fields(): void
     {
-        $admin = $this->createUser(
-            'school_admin',
-            'profile-update-admin'
-        );
-
+        $admin = $this->createUser('school_admin', 'profile-update-admin');
         $student = $this->createStudent('AUDIT003');
-
-        $this->actingAs($admin)
-            ->patch(route('students.profile.update', $student), [
-                'full_name' => 'Updated Student Name',
-                'phone' => '0123456789',
-                'status' => 'inactive',
-                'student_number' => 'CHANGED',
-            ])
-            ->assertRedirect();
-
+        $this->actingAs($admin)->patch(route('students.profile.update', $student), [
+            'full_name' => 'Updated Student Name',
+            'phone' => '0123456789',
+            'status' => 'inactive',
+            'student_number' => 'CHANGED',
+        ])->assertRedirect();
         $student->refresh();
-
-        $this->assertSame(
-            'Updated Student Name',
-            $student->full_name
-        );
-
+        $this->assertSame('Updated Student Name', $student->full_name);
         $this->assertSame('active', $student->status);
         $this->assertSame('AUDIT003', $student->student_number);
-
         $this->assertDatabaseHas('audit_logs', [
-            'actor_user_id' => $admin->id,
-            'module' => 'students',
-            'action' => 'update',
-            'auditable_id' => $student->id,
+            'actor_user_id' => $admin->id, 'module' => 'students',
+            'action' => 'update', 'auditable_id' => $student->id,
         ]);
     }
 
     public function test_failed_transfer_does_not_write_success_audit(): void
     {
-        $admin = $this->createUser(
-            'school_admin',
-            'audit-failed-transfer'
-        );
-
+        $admin = $this->createUser('school_admin', 'audit-failed-transfer');
         $student = $this->createStudent('AUDIT004');
         $this->enroll($student, '6B1');
-
         try {
-            app(StudentTransferService::class)->transfer(
-                $admin,
-                $student,
-                $this->classes['6B1']
-            );
-
+            app(StudentTransferService::class)->transfer($admin, $student, $this->classes['6B1']);
             $this->fail('Transfer should have been rejected.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey(
-                'class_id',
-                $exception->errors()
-            );
+            $this->assertArrayHasKey('class_id', $exception->errors());
         }
-
         $this->assertDatabaseMissing('audit_logs', [
-            'actor_user_id' => $admin->id,
-            'module' => 'students',
-            'action' => 'transfer',
-            'auditable_id' => $student->id,
-            'outcome' => 'success',
+            'actor_user_id' => $admin->id, 'module' => 'students',
+            'action' => 'transfer', 'auditable_id' => $student->id, 'outcome' => 'success',
         ]);
+    }
+
+    public function test_assistant_without_delegation_cannot_update_student(): void
+    {
+        [$teacher, $teacherId] = $this->createTeacher('assistant_class_teacher', 'assistant-without-permission');
+        DB::table('teacher_class_assignments')->insert([
+            'teacher_profile_id' => $teacherId, 'class_id' => $this->classes['6B1'],
+            'position' => 'assistant_class_teacher',
+            'start_date' => now()->subDays(5)->toDateString(), 'status' => 'active',
+        ]);
+        $student = $this->createStudent('ASSIST001');
+        $this->enroll($student, '6B1');
+        $this->assertTrue(Gate::forUser($teacher)->allows('view', $student));
+        $this->assertFalse(Gate::forUser($teacher)->allows('update', $student));
+    }
+
+    public function test_delegated_assistant_can_update_assigned_student(): void
+    {
+        [$teacher, $teacherId] = $this->createTeacher('assistant_class_teacher', 'assistant-with-permission');
+        $teacher->givePermissionTo('students.update');
+        DB::table('teacher_class_assignments')->insert([
+            'teacher_profile_id' => $teacherId, 'class_id' => $this->classes['6B1'],
+            'position' => 'assistant_class_teacher',
+            'start_date' => now()->subDays(5)->toDateString(), 'status' => 'active',
+        ]);
+        $allowed = $this->createStudent('ASSIST002');
+        $denied = $this->createStudent('ASSIST003');
+        $this->enroll($allowed, '6B1');
+        $this->enroll($denied, '6B3');
+        $this->assertTrue(Gate::forUser($teacher)->allows('update', $allowed));
+        $this->assertFalse(Gate::forUser($teacher)->allows('update', $denied));
+    }
+
+    public function test_student_can_access_only_linked_self_profile(): void
+    {
+        $user = $this->createUser('student', 'self-student');
+        $own = StudentProfile::create([
+            'user_id' => $user->id, 'student_number' => 'SELF001',
+            'full_name' => 'My Student Profile', 'status' => 'active',
+        ]);
+        $other = $this->createStudent('SELF002');
+        $this->assertTrue(Gate::forUser($user)->allows('viewOwn', $own));
+        $this->assertFalse(Gate::forUser($user)->allows('viewOwn', $other));
+        $this->assertFalse(Gate::forUser($user)->allows('view', $other));
+        $this->actingAs($user)->get(route('student.self.show'))
+            ->assertOk()->assertJsonPath('student_number', 'SELF001');
+    }
+
+    public function test_student_self_update_is_restricted_and_audited(): void
+    {
+        $user = $this->createUser('student', 'self-update');
+        $student = StudentProfile::create([
+            'user_id' => $user->id, 'student_number' => 'SELF003',
+            'full_name' => 'Original Student', 'phone' => '0111111111', 'status' => 'active',
+        ]);
+        $this->actingAs($user)->patchJson(route('student.self.update'), [
+            'phone' => '0122222222', 'full_name' => 'Unapproved Name', 'status' => 'inactive',
+        ])->assertOk()->assertJsonPath('student.phone', '0122222222');
+        $student->refresh();
+        $this->assertSame('0122222222', $student->phone);
+        $this->assertSame('Original Student', $student->full_name);
+        $this->assertSame('active', $student->status);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $user->id, 'auditable_id' => $student->id,
+            'module' => 'students', 'action' => 'self_update',
+        ]);
+    }
+
+    public function test_historical_access_does_not_grant_current_profile_access(): void
+    {
+        [$teacher, $teacherId] = $this->createTeacher('class_teacher', 'historical-teacher');
+        $this->assignClassTeacher($teacherId, '6B1');
+        $teacher->givePermissionTo('students.view_history');
+        $student = $this->createStudent('HISTORY001');
+        $oldEnrollmentId = $this->enroll(
+            $student, '6B1', $this->semesterOneId, 'transferred',
+            now()->subDay()->toDateString()
+        );
+        $this->enroll($student, '6B2', $this->semesterOneId);
+        $history = app(\App\Services\StudentEnrollmentHistoryAccess::class);
+        $this->assertTrue($history->canView(
+            $teacher, \App\Models\StudentClassEnrollment::findOrFail($oldEnrollmentId)
+        ));
+        $this->assertFalse(app(StudentEnrollmentAccess::class)->canView($teacher, $student));
+    }
+
+    public function test_subject_teacher_historical_access_requires_matching_semester(): void
+    {
+        [$teacher, $teacherId] = $this->createTeacher('subject_teacher', 'historical-subject-teacher');
+        $teacher->givePermissionTo('students.view_history');
+        $this->assignSubjectTeacher($teacherId, '6B2', $this->semesterOneId);
+        $student = $this->createStudent('HISTORY002');
+        $semesterOneEnrollmentId = $this->enroll($student, '6B2', $this->semesterOneId);
+        $semesterTwoEnrollmentId = $this->enroll($student, '6B2', $this->semesterTwoId);
+        $history = app(\App\Services\StudentEnrollmentHistoryAccess::class);
+        $this->assertTrue($history->canView(
+            $teacher, \App\Models\StudentClassEnrollment::findOrFail($semesterOneEnrollmentId)
+        ));
+        $this->assertFalse($history->canView(
+            $teacher, \App\Models\StudentClassEnrollment::findOrFail($semesterTwoEnrollmentId)
+        ));
     }
 
 }

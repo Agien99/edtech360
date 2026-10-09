@@ -107,12 +107,24 @@ class SchoolClassAccess
 
         return $teacher->classAssignments()
             ->where('class_id', $schoolClass->id)
-            ->where('position', 'class_teacher')
             ->where('status', 'active')
             ->whereDate('start_date', '<=', $today)
             ->where(function (Builder $dates) use ($today) {
                 $dates->whereNull('end_date')
                     ->orWhereDate('end_date', '>=', $today);
+            })
+            ->where(function (Builder $positions) use ($user) {
+                $positions->where('position', 'class_teacher');
+
+                if (
+                    $user->hasRole('assistant_class_teacher')
+                    && $user->hasDirectPermission('students.update')
+                ) {
+                    $positions->orWhere(
+                        'position',
+                        'assistant_class_teacher'
+                    );
+                }
             })
             ->exists();
     }
