@@ -1,1 +1,67 @@
-<nav class="ed-sidebar-nav"><a class="ed-nav-link {{ request()->routeIs('dashboard')?'active':'' }}" href="{{ route('dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a><div class="ed-nav-section">Academic</div><a class="ed-nav-link {{ request()->routeIs('students.*')?'active':'' }}" href="{{ route('students.index') }}"><i class="bi bi-people"></i><span>Students</span></a><a class="ed-nav-link" href="#"><i class="bi bi-person-workspace"></i><span>Teachers</span></a><a class="ed-nav-link {{ request()->routeIs('classes.*')?'active':'' }}" href="{{ route('classes.index') }}"><i class="bi bi-easel2"></i><span>Classes</span></a><a class="ed-nav-link {{ request()->routeIs('subjects.*')?'active':'' }}" href="{{ route('subjects.index') }}"><i class="bi bi-book"></i><span>Subjects</span></a><div class="ed-nav-section">Learning</div><a class="ed-nav-link" href="#"><i class="bi bi-check2-square"></i><span>Attendance</span></a><a class="ed-nav-link" href="#"><i class="bi bi-journal-text"></i><span>Homework</span></a><a class="ed-nav-link" href="#"><i class="bi bi-patch-question"></i><span>Quiz</span></a><div class="ed-nav-section">Management</div><a class="ed-nav-link" href="#"><i class="bi bi-calendar3"></i><span>Timetable</span></a><a class="ed-nav-link" href="#"><i class="bi bi-bar-chart"></i><span>Reports</span></a><div class="ed-nav-section">System</div><a class="ed-nav-link" href="#"><i class="bi bi-person-gear"></i><span>Users</span></a><a class="ed-nav-link" href="#"><i class="bi bi-gear"></i><span>Settings</span></a></nav>
+@php
+    $user = auth()->user();
+
+    $navigationGroups = [
+        'Academic' => [
+            [
+                'label' => 'Students',
+                'icon' => 'bi-people',
+                'route' => 'students.index',
+                'active' => 'students.*',
+                'permission' => 'students.view',
+            ],
+            [
+                'label' => 'Classes',
+                'icon' => 'bi-easel2',
+                'route' => 'classes.index',
+                'active' => 'classes.*',
+                'permission' => 'classes.view',
+            ],
+            [
+                'label' => 'Subjects',
+                'icon' => 'bi-book',
+                'route' => 'subjects.index',
+                'active' => 'subjects.*',
+                'permission' => 'subjects.view',
+            ],
+        ],
+    ];
+@endphp
+
+<nav class="ed-sidebar-nav">
+    @can('dashboard.view')
+        <a
+            class="ed-nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+            href="{{ route('dashboard') }}"
+        >
+            <i class="bi bi-grid-1x2-fill"></i>
+            <span>Dashboard</span>
+        </a>
+    @endcan
+
+    @foreach ($navigationGroups as $groupName => $items)
+        @php
+            $visibleItems = collect($items)
+                ->filter(fn ($item) =>
+                    $user?->can($item['permission'])
+                    && Route::has($item['route'])
+                );
+        @endphp
+
+        @if ($visibleItems->isNotEmpty())
+            <div class="ed-nav-section">
+                {{ $groupName }}
+            </div>
+
+            @foreach ($visibleItems as $item)
+                <a
+                    class="ed-nav-link {{ request()->routeIs($item['active']) ? 'active' : '' }}"
+                    href="{{ route($item['route']) }}"
+                >
+                    <i class="bi {{ $item['icon'] }}"></i>
+                    <span>{{ $item['label'] }}</span>
+                </a>
+            @endforeach
+        @endif
+    @endforeach
+</nav>
