@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Http\Requests\StoreAcademicSessionRequest;
 use App\Models\AcademicSession;
 use App\Services\AcademicSessionService;
@@ -14,34 +12,14 @@ class AcademicSessionController extends Controller
     public function index(Request $request): View
     {
         $sessions = AcademicSession::query()
-            ->with([
-                'semesters' => fn ($query) =>
-                    $query->orderBy('number'),
-            ])
-            ->orderByDesc('start_date')
-            ->paginate(10)
-            ->withQueryString();
-
-        return view(
-            'academic-sessions.index',
-            compact('sessions')
-        );
+            ->with(['batch', 'semesters' => fn ($q) => $q->orderBy('number')])
+            ->orderByDesc('start_date')->paginate(10)->withQueryString();
+        return view('academic-sessions.index', compact('sessions'));
     }
-
-    public function store(
-        StoreAcademicSessionRequest $request,
-        AcademicSessionService $service
-    ): RedirectResponse {
-        $service->create(
-            $request->user(),
-            $request->validated()
-        );
-
-        return redirect()
-            ->route('academic-sessions.index')
-            ->with(
-                'success',
-                'Academic session created successfully.'
-            );
+    public function store(StoreAcademicSessionRequest $request, AcademicSessionService $service): RedirectResponse
+    {
+        $service->create($request->user(), $request->validated());
+        return redirect()->route('academic-sessions.index')
+            ->with('success', 'Academic session and intake batch created successfully.');
     }
 }

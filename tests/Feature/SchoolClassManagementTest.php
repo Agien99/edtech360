@@ -57,6 +57,7 @@ class SchoolClassManagementTest extends TestCase
             'end_date' => '2027-12-31', 'is_current' => false, 'status' => 'planned',
         ]);
         $batch = Batch::create([
+            'academic_session_id' => $session->id,
             'code' => 'CLASS-2026', 'name' => 'Class Test Batch',
             'intake_year' => 2026, 'status' => 'active',
         ]);
@@ -67,7 +68,6 @@ class SchoolClassManagementTest extends TestCase
     {
         return array_merge([
             'academic_session_id' => $session->id,
-            'batch_id' => $batch->id,
             'code' => ' 6b1 ', 'name' => 'Form 6 B1',
             'description' => 'Test class',
         ], $overrides);
@@ -171,4 +171,68 @@ class SchoolClassManagementTest extends TestCase
         $this->assertDatabaseHas('classes', ['id' => $class->id, 'status' => 'inactive']);
         $this->assertDatabaseHas('audit_logs', ['module' => 'classes', 'action' => 'change_status', 'auditable_id' => $class->id]);
     }
+    public function test_second_session_uses_its_own_batch(): void
+    {
+        [$first, $firstBatch] = $this->fixtures();
+        $second = AcademicSession::create([
+            'name' => 'Second Class Session', 'start_date' => '2027-06-01',
+            'end_date' => '2028-12-31', 'is_current' => false, 'status' => 'planned',
+        ]);
+        $secondBatch = Batch::create([
+            'academic_session_id' => $second->id, 'code' => 'CLASS-2027',
+            'name' => 'Second Intake', 'intake_year' => 2027, 'status' => 'active',
+        ]);
+        $this->actingAs($this->admin())->post(route('classes.store'), [
+            'academic_session_id' => $second->id, 'code' => '6B1', 'name' => 'Second Intake Class',
+            'batch_id' => $firstBatch->id, // forged/obsolete form field must be ignored
+        ])->assertRedirect(route('classes.index'));
+        $this->assertDatabaseHas('classes', [
+            'academic_session_id' => $second->id, 'batch_id' => $secondBatch->id,
+            'code' => '6B1',
+        ]);
+    }
+
+    public function test_unlinked_session_cannot_register_class(): void
+    {
+        $session = AcademicSession::create([
+            'name' => 'No Batch Session', 'start_date' => '2026-01-01',
+            'end_date' => '2027-12-31', 'is_current' => false, 'status' => 'planned',
+        ]);
+        $this->actingAs($this->admin())->post(route('classes.store'), [
+            'academic_session_id' => $session->id, 'code' => '6B2', 'name' => 'No Batch',
+        ])->assertSessionHasErrors('academic_session_id');
+        $this->assertDatabaseCount('classes', 0);
+    }
+
+    public function test_inactive_batch_cannot_receive_class(): void
+    {
+        [$session, $batch] = $this->fixtures();
+        $batch->update(['status' => 'completed']);
+        $this->actingAs($this->admin())->post(route('classes.store'), [
+            'academic_session_id' => $session->id, 'code' => '6B2', 'name' => 'Invalid Batch',
+        ])->assertSessionHasErrors('academic_session_id');
+        $this->assertDatabaseCount('classes', 0);
+    }
+
+    public function test_class_code_can_be_reused_in_different_sessions(): void
+    {
+        [$first, $firstBatch] = $this->fixtures();
+        $second = AcademicSession::create([
+            'name' => 'Other Intake', 'start_date' => '2027-06-01',
+            'end_date' => '2028-12-31', 'is_current' => false, 'status' => 'planned',
+        ]);
+        $secondBatch = Batch::create([
+            'academic_session_id' => $second->id, 'code' => 'OTHER-2027',
+            'name' => 'Other Batch', 'intake_year' => 2027, 'status' => 'active',
+        ]);
+        SchoolClass::create(['academic_session_id'=>$first->id,'batch_id'=>$firstBatch->id,
+            'code'=>'6B1','name'=>'Old class','status'=>'active']);
+        $this->actingAs($this->admin())->post(route('classes.store'), [
+            'academic_session_id'=>$second->id,'code'=>'6B1','name'=>'New class',
+        ])->assertRedirect(route('classes.index'));
+        $this->assertDatabaseHas('classes',['academic_session_id'=>$second->id,
+            'batch_id'=>$secondBatch->id,'code'=>'6B1']);
+        $this->assertDatabaseCount('classes',2);
+    }
+
 }
