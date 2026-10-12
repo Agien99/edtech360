@@ -1,0 +1,80 @@
+
+name: EdTech360 VPS Deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edtech360-vps-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Yeahhost VPS
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+
+    steps:
+      - name: Configure SSH authentication
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/edtech360_actions
+          chmod 600 ~/.ssh/edtech360_actions
+
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy EdTech360
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/edtech360_actions \
+            -p "$VPS_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+
+          cd /var/www/edtech360
+
+          test "$(git branch --show-current)" = "main"
+          test -f .env
+          test -d vendor
+          test -z "$(git status --porcelain)"
+
+          git fetch origin main
+          git merge --ff-only origin/main
+
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --optimize-autoloader \
+            --no-interaction
+
+          npm ci
+          npm run build
+
+          php artisan optimize:clear
+          php artisan migrate --force
+
+          php artisan config:cache
+          php artisan view:cache
+
+          curl --fail --silent --show-error \
+            http://127.0.0.1/up \
+            -H 'Host: edtech360.digitechgien.com.my'
+
+          echo "EdTech360 deployment completed."
+          REMOTE
