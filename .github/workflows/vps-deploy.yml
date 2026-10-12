@@ -73,8 +73,9 @@ jobs:
           php artisan view:cache
 
           curl --fail --silent --show-error \
-            http://127.0.0.1/up \
-            -H 'Host: edtech360.digitechgien.com.my'
+            --output /dev/null \
+            --resolve edtech360.digitechgien.com.my:443:127.0.0.1 \
+            https://edtech360.digitechgien.com.my/up
 
           echo "EdTech360 deployment completed."
           REMOTE
