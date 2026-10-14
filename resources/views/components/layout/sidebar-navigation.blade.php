@@ -32,6 +32,13 @@
                 'permission' => 'classes.view',
             ],
             [
+                'label' => 'Teacher Assignments',
+                'icon' => 'bi-person-workspace',
+                'route' => 'teacher-assignments.index',
+                'active' => 'teacher-assignments.*',
+                'permission' => 'teachers.assign',
+            ],
+            [
                 'label' => 'Subjects',
                 'icon' => 'bi-book',
                 'route' => 'subjects.index',

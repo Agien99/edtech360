@@ -58,3 +58,6 @@ Route::middleware(['auth','account.active'])->group(function () {
         ->middleware('can:batches.view')->name('batches.index');
     // Batch creation, editing and lifecycle changes are now derived from Academic Sessions.
 });
+
+require __DIR__.'/teacher-assignments.php';
+
