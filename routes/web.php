@@ -61,3 +61,6 @@ Route::middleware(['auth','account.active'])->group(function () {
 
 require __DIR__.'/teacher-assignments.php';
 
+
+require __DIR__.'/student-enrollments.php';
+
