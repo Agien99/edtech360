@@ -1,0 +1,20 @@
+/* Categorized sidebar navigation — desktop and mobile off-canvas */
+.ed-nav-group{min-width:0;margin:2px 0}
+.ed-nav-group-heading{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 12px;border-radius:11px;color:#c1d1ea;cursor:pointer;list-style:none;font-weight:650;user-select:none}
+.ed-nav-group-heading::-webkit-details-marker{display:none}
+.ed-nav-group-heading::marker{content:""}
+.ed-nav-group-heading>i:first-child{width:20px;text-align:center;font-size:17px;flex:none}
+.ed-nav-group-heading span{flex:1;min-width:0}
+.ed-nav-group-heading:hover,.ed-nav-group-heading:focus-visible{background:rgba(255,255,255,.09);color:#fff}
+.ed-nav-group-heading:focus-visible{outline:2px solid #73b8ff;outline-offset:2px}
+.ed-nav-group-current{color:#fff;background:rgba(37,99,235,.17)}
+.ed-nav-chevron{font-size:12px;transition:transform .15s ease}
+.ed-nav-group[open]>.ed-nav-group-heading .ed-nav-chevron{transform:rotate(180deg)}
+.ed-nav-submenu{border-left:1px solid rgba(160,184,224,.23);margin:2px 0 7px 21px;padding:2px 0 3px 8px}
+.ed-nav-subitem{min-height:39px;padding:8px 10px;font-size:12px;white-space:normal}
+.ed-nav-subitem i{flex:none}
+/* Existing icon-only collapsed desktop mode remains usable; click a heading to expand. */
+.sidebar-collapsed .ed-nav-group-heading{justify-content:center;padding-inline:0}
+.sidebar-collapsed .ed-nav-group-heading span,.sidebar-collapsed .ed-nav-chevron,.sidebar-collapsed .ed-nav-submenu{display:none}
+.ed-mobile-drawer .ed-sidebar-nav{overflow-y:auto;max-height:calc(100vh - 92px);padding:4px 12px 22px}
+.ed-mobile-drawer .ed-nav-group-heading{color:#c1d1ea}

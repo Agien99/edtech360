@@ -36,8 +36,7 @@ class StudentRegistrationController extends Controller
         $rows = $this->normalizeAndValidate($data['students']);
         $credentials = $service->registerRows($request->user(), (int)$data['academic_session_id'], $rows);
         return to_route('student-registrations.index')
-            ->with('success', count($credentials).' student(s) registered without class or student number.')
-            ->with('issued_credentials', $credentials);
+            ->with('success', count($credentials).' student(s) registered without class or student number.');
     }
 
     public function import(Request $request, StudentRegistrationService $service): RedirectResponse
@@ -74,8 +73,7 @@ class StudentRegistrationController extends Controller
             $credentials = $service->registerRows($request->user(), (int)$data['academic_session_id'], $rows, 'csv');
         } finally { fclose($handle); }
         return to_route('student-registrations.index')
-            ->with('success', count($credentials).' student(s) imported.')
-            ->with('issued_credentials', $credentials);
+            ->with('success', count($credentials).' student(s) imported.');
     }
 
     private function normalizeAndValidate(array $rows): array

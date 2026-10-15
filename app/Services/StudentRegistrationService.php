@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class StudentRegistrationService
 {
-    /** @return array<int,array{student_number:null,full_name:string,email:string,temporary_password:string}> */
+    /** @return array<int,array{student_number:null,full_name:string,email:string}> */
     public function registerRows(User $actor, int $sessionId, array $rows, string $method = 'form'): array
     {
         return DB::transaction(function () use ($actor, $sessionId, $rows, $method): array {
@@ -31,7 +31,7 @@ class StudentRegistrationService
                 if (StudentProfile::withTrashed()->where('ic_number', $ic)->exists()) {
                     throw ValidationException::withMessages(["students.$index.ic_number" => "Row ".($index + 1).": IC already registered."]);
                 }
-                $password = Str::password(16, true, true, false, false);
+                $password = $ic;
                 $user = User::create(['name' => trim($row['full_name']), 'email' => $email,
                     'password' => $password, 'is_active' => true]);
                 $user->assignRole('student');
@@ -44,7 +44,7 @@ class StudentRegistrationService
                     ['user_id' => $user->id, 'batch_id' => $batch->id, 'student_number' => null],
                     ['registration_method' => $method]);
                 $credentials[] = ['student_number' => null, 'full_name' => $student->full_name,
-                    'email' => $email, 'temporary_password' => $password];
+                    'email' => $email];
             }
             return $credentials;
         }, 3);

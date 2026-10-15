@@ -4,15 +4,6 @@
 <x-ui.page-header title="Student Registration" description="Create student logins and assign intakes. Students choose classes after onboarding." />
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 @if($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-@if(session('issued_credentials'))
-<section class="ed-card p-4 mb-4 border border-warning" id="credentials">
-  <h2 class="h5">New Login Credentials — One-time display</h2>
-  <p class="small text-danger">Copy these credentials now and deliver privately to each student. They will not be shown again. Do not share screenshots or store the file on a public device. Password change on first login must be implemented before production use.</p>
-  <div class="table-responsive"><table class="table"><thead><tr><th>Student</th><th>Email</th><th>Temporary password</th></tr></thead><tbody>
-  @foreach(session('issued_credentials') as $credential)<tr><td>{{ $credential['full_name'] }}</td><td>{{ $credential['email'] }}</td><td><code>{{ $credential['temporary_password'] }}</code></td></tr>@endforeach
-  </tbody></table></div>
-</section>
-@endif
 <div class="ed-card p-4 mb-4">
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
     <div><h2 class="h5 mb-1">Register Students</h2><p class="text-muted small mb-0">Add students directly with IC, name and email. Student numbers remain unassigned.</p></div>
@@ -25,7 +16,7 @@
     <form method="POST" action="{{ route('student-registrations.store') }}">@csrf
       <div class="modal-body">
         <div class="mb-3"><label class="form-label">Academic Session / Intake</label><select name="academic_session_id" class="form-select" required><option value="">Choose intake</option>@foreach($sessions as $session)<option value="{{ $session->id }}" @selected(old('academic_session_id') == $session->id)>{{ $session->name }} — {{ $session->batch?->code }}</option>@endforeach</select></div>
-        <p class="text-muted small">Passwords are randomly generated. Do not enter or use IC numbers as passwords.</p>
+        <p class="text-muted small">Initial login password is the registered 12-digit IC number (without hyphens). Students must change it after first login once the password-change workflow is enabled.</p>
         <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>IC Number</th><th>Full Name</th><th>Email</th><th></th></tr></thead><tbody id="student-rows">
         @foreach(old('students', [['ic_number'=>'','full_name'=>'','email'=>'']]) as $i => $student)
         <tr><td><input class="form-control" name="students[{{ $i }}][ic_number]" value="{{ $student['ic_number'] ?? '' }}" placeholder="12 digits" inputmode="numeric" pattern="[0-9]{6}-?[0-9]{2}-?[0-9]{4}" required></td><td><input class="form-control" name="students[{{ $i }}][full_name]" value="{{ $student['full_name'] ?? '' }}" maxlength="150" required></td><td><input class="form-control" type="email" name="students[{{ $i }}][email]" value="{{ $student['email'] ?? '' }}" required></td><td><button type="button" class="btn btn-sm btn-outline-danger remove-student" aria-label="Remove row"><i class="bi bi-trash"></i></button></td></tr>
