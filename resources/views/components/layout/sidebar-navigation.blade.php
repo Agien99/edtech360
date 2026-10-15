@@ -1,4 +1,4 @@
-﻿@php
+@php
     $user = auth()->user();
 
     $navigationGroups = [
@@ -30,6 +30,13 @@
                 'route' => 'students.index',
                 'active' => 'students.*',
                 'permission' => 'students.view',
+            ],
+            [
+                'label' => 'Student Registration',
+                'icon' => 'bi-person-plus',
+                'route' => 'student-registrations.index',
+                'active' => 'student-registrations.*',
+                'permission' => 'students.create',
             ],
             [
                 'label' => 'Student Enrollment',

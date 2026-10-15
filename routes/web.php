@@ -66,3 +66,5 @@ require __DIR__.'/student-enrollments.php';
 
 
 require __DIR__.'/class-change-windows.php';
+
+require __DIR__.'/student-registrations.php';
