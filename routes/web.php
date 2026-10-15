@@ -21,7 +21,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth','account.active'])->group(function () {
     Route::post('/logout', [AuthController::class,'logout'])->name('logout');
     Route::get('/dashboard', [UiDemoController::class,'dashboard'])->middleware('can:dashboard.view')->name('dashboard');
-    Route::get('/students', [ScopedStudentController::class,'index'])->middleware('can:students.view')->name('students.index');
+    // Student Directory routes are loaded from routes/student-directory.php
     Route::get('/students/register', [UiDemoController::class,'registerStudent'])->middleware('can:students.create')->name('students.create');
     Route::get('/students/complete-profile', [UiDemoController::class,'completeProfile'])->middleware('can:students.update')->name('students.complete-profile');
     Route::get('/classes', [ScopedClassController::class,'index'])->middleware('can:classes.view')->name('classes.index');
@@ -68,3 +68,5 @@ require __DIR__.'/student-enrollments.php';
 require __DIR__.'/class-change-windows.php';
 
 require __DIR__.'/student-registrations.php';
+
+require __DIR__.'/student-directory.php';
