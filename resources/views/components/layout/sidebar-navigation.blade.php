@@ -11,6 +11,13 @@
                 'permission' => 'academic_sessions.view',
             ],
             [
+                'label' => 'Class Change Windows',
+                'icon' => 'bi-arrow-left-right',
+                'route' => 'class-change-windows.index',
+                'active' => 'class-change-windows.*',
+                'permission' => 'academic_sessions.manage',
+            ],
+            [
                 'label' => 'Batches',
                 'icon' => 'bi-collection',
                 'route' => 'batches.index',
