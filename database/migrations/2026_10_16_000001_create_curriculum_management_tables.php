@@ -1,0 +1,15 @@
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+return new class extends Migration {
+ public function up(): void {
+  Schema::create('class_subjects',function(Blueprint $t){$t->id();$t->foreignId('class_id')->constrained('classes')->restrictOnDelete();$t->foreignId('subject_id')->constrained('subjects')->restrictOnDelete();$t->timestamps();$t->unique(['class_id','subject_id']);});
+  Schema::create('subject_coordinator_assignments',function(Blueprint $t){$t->id();$t->foreignId('subject_id')->constrained('subjects')->restrictOnDelete();$t->foreignId('teacher_profile_id')->constrained('teacher_profiles')->restrictOnDelete();$t->foreignId('academic_session_id')->constrained('academic_sessions')->restrictOnDelete();$t->string('status',20)->default('active');$t->timestamps();$t->unique(['subject_id','teacher_profile_id','academic_session_id'],'subject_coordinator_unique');});
+  Schema::create('subject_syllabuses',function(Blueprint $t){$t->id();$t->foreignId('subject_id')->constrained('subjects')->restrictOnDelete();$t->string('version',80);$t->string('title',200);$t->text('reference_url')->nullable();$t->string('status',20)->default('draft');$t->foreignId('published_by')->nullable()->constrained('users')->nullOnDelete();$t->timestamp('published_at')->nullable();$t->timestamps();$t->unique(['subject_id','version']);});
+  Schema::create('academic_session_syllabuses',function(Blueprint $t){$t->id();$t->foreignId('academic_session_id')->constrained('academic_sessions')->restrictOnDelete();$t->foreignId('subject_id')->constrained('subjects')->restrictOnDelete();$t->foreignId('subject_syllabus_id')->constrained('subject_syllabuses')->restrictOnDelete();$t->timestamps();$t->unique(['academic_session_id','subject_id'],'session_subject_syllabus_unique');});
+  Schema::create('subject_syllabus_topics',function(Blueprint $t){$t->id();$t->foreignId('subject_syllabus_id')->constrained('subject_syllabuses')->restrictOnDelete();$t->foreignId('parent_id')->nullable()->constrained('subject_syllabus_topics')->restrictOnDelete();$t->unsignedTinyInteger('semester_number');$t->unsignedInteger('sort_order')->default(0);$t->string('title',200);$t->text('description')->nullable();$t->text('learning_objectives')->nullable();$t->string('status',20)->default('draft');$t->foreignId('published_by')->nullable()->constrained('users')->nullOnDelete();$t->timestamp('published_at')->nullable();$t->timestamps();$t->index(['subject_syllabus_id','semester_number','sort_order'],'syllabus_topic_order_idx');});
+  Schema::create('subject_syllabus_topic_revisions',function(Blueprint $t){$t->id();$t->foreignId('topic_id')->constrained('subject_syllabus_topics')->restrictOnDelete();$t->foreignId('edited_by')->nullable()->constrained('users')->nullOnDelete();$t->json('snapshot');$t->timestamps();});
+ }
+ public function down(): void {foreach(['subject_syllabus_topic_revisions','subject_syllabus_topics','academic_session_syllabuses','subject_syllabuses','subject_coordinator_assignments','class_subjects'] as $name)Schema::dropIfExists($name);}
+};

@@ -28,7 +28,7 @@ Route::middleware(['auth','account.active'])->group(function () {
     Route::post('/classes', [SchoolClassManagementController::class,'store'])->middleware('can:classes.create')->name('classes.store');
     Route::patch('/classes/{schoolClass}', [SchoolClassManagementController::class,'update'])->middleware('can:classes.update')->name('classes.update');
     Route::patch('/classes/{schoolClass}/deactivate', [SchoolClassManagementController::class,'deactivate'])->middleware('can:classes.update')->name('classes.deactivate');
-    Route::get('/subjects', [UiDemoController::class,'subjects'])->middleware('can:subjects.view')->name('subjects.index');
+    Route::redirect('/subjects', '/curriculum')->middleware(['auth', 'account.active', 'can:subjects.view'])->name('subjects.index');
     Route::patch('/students/{student}/profile', [StudentManagementController::class,'update'])->name('students.profile.update');
     Route::post('/students/{student}/transfer', [StudentManagementController::class,'transfer'])->name('students.transfer');
     Route::get('/my/student-profile', [StudentSelfServiceController::class,'show'])->name('student.self.show');
@@ -61,12 +61,12 @@ Route::middleware(['auth','account.active'])->group(function () {
 
 require __DIR__.'/teacher-assignments.php';
 
-
 require __DIR__.'/student-enrollments.php';
-
 
 require __DIR__.'/class-change-windows.php';
 
 require __DIR__.'/student-registrations.php';
 
 require __DIR__.'/student-directory.php';
+
+require __DIR__.'/curriculum.php';
